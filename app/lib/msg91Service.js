@@ -11,9 +11,9 @@ const MSG91_BASE_URL = 'https://api.msg91.com/api/v5';
  */
 export async function sendOTP(phone, otp = null) {
     try {
-        const authKey = process.env.MSG91_AUTH_KEY;
-        const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
-        const senderId = process.env.MSG91_SENDER_ID || 'FDCOTP';
+        const authKey = process.env.MSG91_AUTH_KEY?.trim();
+        const templateId = process.env.MSG91_OTP_TEMPLATE_ID?.trim();
+        const senderId = process.env.MSG91_SENDER_ID?.trim() || 'FDCOTP';
 
         console.log('[MSG91 DEBUG] Environment variables:');
         console.log('[MSG91 DEBUG] MSG91_AUTH_KEY exists:', !!authKey);
@@ -32,26 +32,29 @@ export async function sendOTP(phone, otp = null) {
             throw new Error('MSG91_OTP_TEMPLATE_ID not configured');
         }
 
-        // Build request URL
-        const url = new URL(`${MSG91_BASE_URL}/otp`);
-        url.searchParams.append('authkey', authKey);
-        url.searchParams.append('template_id', templateId);
-        url.searchParams.append('mobile', phone);
-        url.searchParams.append('sender', senderId);
+        // Build Payload according to MSG91 v5 API documentation (POST JSON)
+        const payload = {
+            template_id: templateId,
+            mobile: phone,
+            sender: senderId
+        };
 
-        // If OTP provided, use it; otherwise MSG91 generates one
         if (otp) {
-            url.searchParams.append('otp', otp);
+            payload.otp = otp;
         }
 
-        console.log('[MSG91 DEBUG] Full URL:', url.toString().replace(authKey, '***HIDDEN***'));
-        console.log('[MSG91 DEBUG] Making API call...');
+        const url = `${MSG91_BASE_URL}/otp`;
+        console.log('[MSG91 DEBUG] Full URL:', url);
+        console.log('[MSG91 DEBUG] Payload template_id:', payload.template_id);
+        console.log('[MSG91 DEBUG] Making API call (POST)...');
 
-        const response = await fetch(url.toString(), {
-            method: 'GET',
+        const response = await fetch(url, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'authkey': authKey
+            },
+            body: JSON.stringify(payload)
         });
 
         console.log('[MSG91 DEBUG] Response status:', response.status);
